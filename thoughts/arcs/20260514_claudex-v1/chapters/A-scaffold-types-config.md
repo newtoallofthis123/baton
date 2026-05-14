@@ -224,6 +224,7 @@ Initialise the Rust crate, lay down the module tree from the PRD, and define the
   pub enum ProviderError {
       #[error("transcript root not found: {0}")] RootNotFound(PathBuf),
       #[error("session id `{0}` not found")] SessionNotFound(String),
+      #[error("session id `{id}` matched multiple transcripts: {matches:?}")] AmbiguousSession { id: String, matches: Vec<PathBuf> },
       #[error("transcript unreadable at {path}: {source}")] TranscriptUnreadable { path: PathBuf, #[source] source: std::io::Error },
       #[error("invalid JSONL at {path}:{line}: {source}")] InvalidJsonl { path: PathBuf, line: usize, #[source] source: serde_json::Error },
   }
@@ -348,6 +349,7 @@ Initialise the Rust crate, lay down the module tree from the PRD, and define the
       Path,
       Show,
       Edit,
+      Get { key: String },
       Set { key: String, value: String },
       AddRoot { agent: String, path: std::path::PathBuf },
       RemoveRoot { agent: String, path: std::path::PathBuf },

@@ -47,7 +47,7 @@ Outer envelope variants:
 
 `response_item` with `payload.type == "message"` carries `payload.content` as an array of OpenAI-style content parts (`{type: "input_text", text}`, `{type: "output_text", text}`); flatten by concatenating all text parts.
 
-`function_call` `payload.arguments` is a JSON-encoded string. Surface it as the tool input verbatim (don't double-parse — the renderer will pretty-print).
+`function_call` `payload.arguments` is a JSON-encoded string. Surface it as the tool input verbatim (don't double-parse; the renderer will print the preserved text with truncation if needed).
 
 ## Phases
 
@@ -66,7 +66,7 @@ Outer envelope variants:
   - To populate `title` and `updated_at` cheaply: scan the rest of the file with a tiny struct `{ timestamp: Option<String>, type: Option<String>, payload: Option<{type, message, role, content}> }`. First user-text → title (first 80 chars). Last `timestamp` → `updated_at`.
   - Sort by `started_at` desc.
 
-- **Error policy:** Same as Claude — bad single file ≠ fatal; skip and continue.
+- **Error policy:** Same as Claude — bad single file ≠ fatal; skip and continue. Configured roots that do not exist return `RootNotFound`; discovered default roots that do not exist are tolerated only if at least one other effective root produced entries. If no effective root exists, return `RootNotFound` with the first attempted root.
 
 ### D.3 — Session resolution
 
@@ -74,7 +74,7 @@ Outer envelope variants:
 - **Implementation:**
   - Fast path: filename-glob `**/rollout-*-<id>.jsonl` under each effective root. On match, read first line and verify `session_meta.payload.id == id` to defend against id collisions across filename conventions.
   - If no filename match, fall back to scanning all rollouts and reading the first line until one matches. v1 doesn't need an index.
-  - Zero matches → `SessionNotFound`. Multiple matches → log to stderr, return the first by directory mtime.
+  - Zero matches → `SessionNotFound`. Multiple matches → `AmbiguousSession { id, matches }` with deterministic, sorted match paths.
 
 ### D.4 — Transcript parser
 

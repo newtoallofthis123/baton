@@ -169,7 +169,7 @@ The default flow:
 6. Start the target agent with a short catch-up prompt referencing the file.
 7. Print the handoff file path and launch result.
 
-If launch fails, the command should still succeed if the handoff file was written. The user can manually paste or reuse the file path.
+If launch fails, the operation fails and exits non-zero, but only after printing the written handoff file path and a clear launch error. The user can manually paste or reuse the file path.
 
 ### Settings
 
@@ -177,7 +177,10 @@ If launch fails, the command should still succeed if the handoff file was writte
 claudex settings path
 claudex settings show
 claudex settings edit
+claudex settings get handoff_dir
+claudex settings get roots.claude
 claudex settings set handoff_dir ~/.handoffs
+claudex settings set roots.codex '["~/.codex/sessions"]'
 claudex settings add-root claude ~/.claude/projects
 claudex settings add-root codex ~/.codex/sessions
 claudex settings remove-root claude ~/.claude/projects
@@ -185,14 +188,15 @@ claudex settings reset-root claude
 claudex settings reset-root codex
 ```
 
-The settings subcommand owns persistent user configuration. It should be boring and scriptable.
+The settings subcommand owns persistent TOML user configuration. It should be boring and scriptable.
 
 Settings requirements:
 
 - `path` prints the effective config file path.
 - `show` prints the effective config, including defaults and user overrides.
 - `edit` opens the config file in `$EDITOR`.
-- `set handoff_dir` sets the handoff output directory.
+- `get <key>` prints the TOML config value for a supported key after applying path expansion where appropriate. V1 must support `handoff_dir`, `roots.claude`, and `roots.codex`.
+- `set <key> <value>` updates a supported TOML config key. V1 must support `handoff_dir`, `roots.claude`, and `roots.codex`; root-list values are TOML arrays of strings.
 - `add-root` appends an agent transcript root.
 - `remove-root` removes an agent transcript root.
 - `reset-root` removes user overrides and returns that agent to discovered defaults.
@@ -442,9 +446,9 @@ codex "<prompt>"
 
 These should start a fresh interactive target session with the catch-up prompt as the initial user message. V1 should not default to non-interactive modes such as `claude -p` or `codex exec`, because the handoff is meant to continue work in the target agent, not produce a one-shot answer.
 
-If an agent executable is missing or launch arguments differ by environment, return a clear error after writing the handoff file.
+If an agent executable is missing, launch arguments differ by environment, or the target process exits non-zero, return a clear error after writing the handoff file.
 
-The launcher is deliberately less important than the artifact. A failed launch should not invalidate a successful handoff.
+The launcher is deliberately less important than the artifact. A failed launch invalidates the operation result, but not the successfully written handoff file.
 
 ### Launch Research Notes
 
@@ -620,7 +624,7 @@ V1 includes:
    Verify: inspect output includes metadata, counts, and preview.
 
 11. Implement `settings`.
-    Verify: settings commands create, show, update, and reset path-focused config.
+    Verify: settings commands create, show, get, set, update, and reset path-focused TOML config.
 
 12. Implement `handoff --no-launch`.
     Verify: command writes a handoff file from fixture sessions.
@@ -642,7 +646,7 @@ Mitigations:
 - preserve unknown events compactly
 - always write an inspectable artifact
 - mark truncation explicitly
-- treat launch as optional after successful file creation
+- treat launch as a post-write step: the artifact remains useful and its path is printed even when the command exits non-zero
 
 ## Open Questions
 
@@ -657,6 +661,6 @@ Mitigations:
 - a user can inspect what will be handed off before launching anything
 - a user can generate a readable handoff file from a source session
 - the target agent starts with a short prompt pointing at that file
-- the handoff file remains useful if launch fails
+- the handoff file remains useful if launch fails, even though the operation exits non-zero
 - parser changes stay isolated to provider modules when transcript shapes drift
 - fixtures make renderer and parser regressions obvious

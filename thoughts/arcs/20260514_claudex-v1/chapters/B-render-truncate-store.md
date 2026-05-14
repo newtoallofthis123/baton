@@ -19,7 +19,7 @@ Convert a neutral `Conversation` into a stable Markdown handoff, apply the v1 tr
 
 - `render::render(&Conversation)` returns `String` exactly matching the PRD §"Handoff Rendering" default shape — lowercase role labels, top metadata block, blank-line separators, preserved order.
 - Truncation defaults match PRD §"Truncation Rules": human/agent text uncut; tool input ≤ 4000 chars; tool output ≤ 2000 chars; unknown event ≤ 1000 chars. Every truncation emits `[truncated: showing first N chars of M]`.
-- `handoff_store::write(...)` creates `~/.handoffs` if missing, writes UTF-8, refuses to overwrite an existing file (returns `HandoffStoreError::AlreadyExists`), returns the final path.
+- `handoff_store::write(...)` creates `~/.handoffs` if missing, writes UTF-8 with `create_new`, never overwrites an existing file, retries deduped names on collision, and returns the final path.
 - Filename format: `<source>-to-<target>-<YYYYMMDD>-<HHMMSS>-<short-id>.md`, where `<short-id>` is the first 8 chars of the source session id (sanitised to `[A-Za-z0-9_-]`). On collision, append `-2`, `-3`, … until unique.
 - `cargo test` snapshot tests pass covering: basic human+agent dialogue, tool call with short output, tool call with truncated output, mixed ordering, unknown event preservation, missing `cwd`.
 
@@ -152,7 +152,7 @@ Convert a neutral `Conversation` into a stable Markdown handoff, apply the v1 tr
   - Build a base filename `<source>-to-<target>-<YYYYMMDD>-<HHMMSS>-<short>.md`.
   - `<short>` = first 8 chars of `session_id` after sanitising to keep only `[A-Za-z0-9_-]`; pad/truncate to exactly 8 chars; if empty after sanitisation, use `"session"`.
   - Use `OpenOptions::new().create_new(true).write(true)` to refuse overwrites.
-  - On `AlreadyExists`, retry with `-2`, `-3`, … up to a small cap (say 100). Beyond that, return `AlreadyExists` with the last attempted path.
+  - On `AlreadyExists`/`ErrorKind::AlreadyExists`, retry with `-2`, `-3`, … up to a small cap (say 100). Beyond that, return `AlreadyExists` with the last attempted path.
 
 ### B.5 — Handoff store tests
 

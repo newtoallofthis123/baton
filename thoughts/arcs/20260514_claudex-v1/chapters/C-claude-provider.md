@@ -17,7 +17,7 @@ Implement `providers::claude::ClaudeProvider` end to end: discover roots from co
 ## Success criteria
 
 - `ClaudeProvider::list_sessions()` returns one `SessionSummary` per `*.jsonl` file under any effective root, populated with `id` (filename stem), `path`, `cwd` (from the first user/assistant line that carries it), `started_at` (first timestamp), `updated_at` (last timestamp), `title` (first ≤ 80 chars of the first user message with non-empty text content).
-- `ClaudeProvider::resolve_session("<id>")` finds the unique `<id>.jsonl` across all effective roots; ambiguity is reported via `ProviderError::SessionNotFound` augmented with a message listing matches; missing id is `SessionNotFound`.
+- `ClaudeProvider::resolve_session("<id>")` finds the unique `<id>.jsonl` across all effective roots; ambiguity is reported via `ProviderError::AmbiguousSession { id, matches }`; missing id is `SessionNotFound`.
 - `parse_transcript` produces a `Conversation` whose blocks preserve transcript order, classify `user`/`assistant` messages correctly (including content-array shape), surface `tool_use`/`tool_result` as separate blocks, drop `permission-mode` / `file-history-snapshot` / `last-prompt` as `SystemEvent`s (compact), and emit `UnknownEvent` for any other `type` value rather than failing.
 - Structurally invalid JSONL (unparseable line) returns `ProviderError::InvalidJsonl` with path + 1-indexed line number.
 - Fixture-driven snapshot tests pass.
@@ -87,13 +87,13 @@ Non-conversational top-level types observed: `permission-mode`, `file-history-sn
     - `updated_at` = last parseable `timestamp`. To avoid re-reading, scan the whole file but stop short of full parsing — only `serde_json::from_str::<TimestampLine>` with a tiny struct `{ #[serde(default)] timestamp: Option<String> }`.
   - Return `Vec<SessionSummary>` sorted by `started_at` descending (newest first) so `--last` is a simple `.first()`.
 
-- **Error policy:** A bad transcript file should not nuke the list. If a file fails to read or has zero parseable lines, log to stderr and skip it. Hard failures only when the root path itself is unreadable — even then, return the entries from other roots if any.
+- **Error policy:** A bad transcript file should not nuke the list. If a file fails to read or has zero parseable lines, log to stderr and skip it. Configured roots that do not exist return `RootNotFound`; discovered default roots that do not exist are tolerated only if at least one other effective root produced entries. If no effective root exists, return `RootNotFound` with the first attempted root.
 
 ### C.3 — Session resolution
 
 - **Goal:** Map a session id to a `ResolvedSession`. The id is the filename stem.
 - **Files & changes:** `providers/claude.rs`.
-- **Implementation:** Iterate effective roots, glob `<root>/*/<id>.jsonl`. On hit, return `ResolvedSession { agent: Claude, id, path }`. Zero hits → `SessionNotFound`. Multiple hits across roots → return the first (sorted by `updated_at` desc if cheap; otherwise lexicographic root order) but log the ambiguity to stderr.
+- **Implementation:** Iterate effective roots, glob `<root>/*/<id>.jsonl`. One hit → `ResolvedSession { agent: Claude, id, path }`. Zero hits → `SessionNotFound`. Multiple hits across roots → `AmbiguousSession { id, matches }` with deterministic, sorted match paths.
 
 ### C.4 — Transcript parser
 
@@ -110,8 +110,8 @@ Non-conversational top-level types observed: `permission-mode`, `file-history-sn
           Some("assistant") => push_message(blocks, idx, value, Role::Agent),
           Some(t @ ("permission-mode" | "file-history-snapshot" | "last-prompt" | "attachment"))
               => blocks.push(SystemEvent { label: t.to_string(), detail: compact(value) }),
-          Some(other) => blocks.push(UnknownEvent { raw_type: other, raw_excerpt: truncate_to(UNKNOWN_EVENT_LIMIT, value) }),
-          None        => blocks.push(UnknownEvent { raw_type: "<missing>", raw_excerpt: truncate_to(UNKNOWN_EVENT_LIMIT, value) }),
+          Some(other) => blocks.push(UnknownEvent { raw_type: other, raw_excerpt: compact(value) }),
+          None        => blocks.push(UnknownEvent { raw_type: "<missing>", raw_excerpt: compact(value) }),
       }
   ```
 
@@ -121,7 +121,7 @@ Non-conversational top-level types observed: `permission-mode`, `file-history-sn
     - `text` → emit text block (concatenate consecutive text items from the same line into one block? **No.** Emit them in order as separate blocks only if there are intervening tool blocks; otherwise concatenate with a single newline. Implementor: join consecutive `text` items into one text block per side. This avoids artificial paragraph splits.)
     - `tool_use` → emit `ToolCall { name, input: serde_json::to_string_pretty(&input)? }`
     - `tool_result` → flatten `content` (string OR `[{type: text, text}]`) into a single string, emit `ToolResult { output, truncated: None }`. Truncation is applied at render time, not parse time.
-    - any other item `type` → emit `UnknownEvent`.
+    - any other item `type` → emit `UnknownEvent` with compact raw JSON. Do not truncate in the provider; renderer-owned truncation is what produces the required visible marker.
 
   Metadata harvest as we go: first `cwd`, first `timestamp` for `Conversation.started_at`. `session_id` = filename stem (already known). `transcript_path` = the file path.
 
