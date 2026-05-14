@@ -1,0 +1,6 @@
+{"timestamp":"2026-05-14T11:00:00Z","type":"session_meta","payload":{"id":"fixture-tool","cwd":"/work/proj","timestamp":"2026-05-14T11:00:00Z","originator":"test"}}
+{"timestamp":"2026-05-14T11:00:01Z","type":"turn_context","payload":{"model":"gpt-test"}}
+{"timestamp":"2026-05-14T11:00:02Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"list files in cwd"}]}}
+{"timestamp":"2026-05-14T11:00:03Z","type":"response_item","payload":{"type":"function_call","name":"shell","arguments":"{\"cmd\":\"ls\"}"}}
+{"timestamp":"2026-05-14T11:00:04Z","type":"response_item","payload":{"type":"function_call_output","output":"README.md\nsrc\n"}}
+{"timestamp":"2026-05-14T11:00:05Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Found 2 entries."}]}}

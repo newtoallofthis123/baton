@@ -1,0 +1,14 @@
+---
+source: tests/codex_provider.rs
+expression: dump_conversation(&c)
+---
+session_id: fixture-simple
+agent: Codex
+cwd: /work/proj
+started_at: 2026-05-14T10:00:00Z
+blocks:
+  [0] SystemEvent: label=session_meta detail={"cwd":"/work/proj","id":"fixture-simple","originator":"test","timestamp":"2026-05-14T10:00:00Z"}
+  [1] HumanMessage: "hello codex"
+  [2] AgentMessage: "hi there"
+  [3] HumanMessage: "what's up?"
+  [4] AgentMessage: "the sky"

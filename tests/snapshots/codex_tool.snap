@@ -1,0 +1,15 @@
+---
+source: tests/codex_provider.rs
+expression: dump_conversation(&c)
+---
+session_id: fixture-tool
+agent: Codex
+cwd: /work/proj
+started_at: 2026-05-14T11:00:00Z
+blocks:
+  [0] SystemEvent: label=session_meta detail={"cwd":"/work/proj","id":"fixture-tool","originator":"test","timestamp":"2026-05-14T11:00:00Z"}
+  [1] SystemEvent: label=turn_context detail={"model":"gpt-test"}
+  [2] HumanMessage: "list files in cwd"
+  [3] ToolCall: name="shell" input="{\"cmd\":\"ls\"}"
+  [4] ToolResult: output="README.md\nsrc\n"
+  [5] AgentMessage: "Found 2 entries."

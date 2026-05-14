@@ -1,0 +1,5 @@
+{"timestamp":"2026-05-14T10:00:00Z","type":"session_meta","payload":{"id":"fixture-simple","cwd":"/work/proj","timestamp":"2026-05-14T10:00:00Z","originator":"test"}}
+{"timestamp":"2026-05-14T10:00:01Z","type":"event_msg","payload":{"type":"user_message","message":"hello codex"}}
+{"timestamp":"2026-05-14T10:00:02Z","type":"event_msg","payload":{"type":"agent_message","message":"hi there"}}
+{"timestamp":"2026-05-14T10:00:03Z","type":"event_msg","payload":{"type":"user_message","message":"what's up?"}}
+{"timestamp":"2026-05-14T10:00:04Z","type":"event_msg","payload":{"type":"agent_message","message":"the sky"}}
