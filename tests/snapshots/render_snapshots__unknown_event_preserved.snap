@@ -1,0 +1,20 @@
+---
+source: tests/render_snapshots.rs
+expression: rendered
+---
+source: claude
+target: codex
+session_id: abc123
+cwd: /Users/noob/Projects/example
+transcript: /Users/noob/.claude/sessions/abc123.jsonl
+created_at: 2026-05-14T22:40:00+05:30
+
+human:
+Run a custom tool.
+
+unknown:
+type: experimental.custom_event
+{"foo":"bar","baz":42}
+
+system:
+note: tool registry refreshed

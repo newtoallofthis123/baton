@@ -1,0 +1,15 @@
+---
+source: tests/render_snapshots.rs
+expression: rendered
+---
+source: claude
+target: codex
+session_id: abc123
+transcript: /Users/noob/.claude/sessions/abc123.jsonl
+created_at: 2026-05-14T22:40:00+05:30
+
+human:
+Quick question.
+
+agent:
+Sure.

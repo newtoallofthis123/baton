@@ -1,0 +1,43 @@
+---
+source: tests/render_snapshots.rs
+expression: rendered
+---
+source: claude
+target: codex
+session_id: abc123
+cwd: /Users/noob/Projects/example
+transcript: /Users/noob/.claude/sessions/abc123.jsonl
+created_at: 2026-05-14T22:40:00+05:30
+
+human:
+Check the deploy script.
+
+agent:
+Looking now.
+
+tool:
+name: Bash
+input:
+cat deploy.sh
+
+output:
+#!/usr/bin/env bash
+set -e
+
+
+agent:
+Deploy script is two lines.
+
+human:
+Anything risky?
+
+tool:
+name: Bash
+input:
+grep -n rm deploy.sh
+
+output:
+
+
+agent:
+Nothing risky.
