@@ -1,4 +1,18 @@
+use std::io::Write as _;
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
+use time::OffsetDateTime;
+
+use crate::config::{self, Config};
+use crate::handoff_store::HandoffStore;
+use crate::launch::{self, Launcher, ProcessLauncher};
+use crate::model::{Agent, Block, Conversation, SessionSummary};
+use crate::providers;
+use crate::render;
+use crate::select::{self, FzfSelector, Selection};
+use crate::session_ref::SessionRef;
+use crate::settings;
 
 #[derive(Parser)]
 #[command(name = "claudex", version)]
@@ -29,8 +43,10 @@ pub enum Command {
         full: bool,
     },
     Handoff {
-        source: Option<String>,
-        target: String,
+        /// either `<source-ref>` (e.g. `claude:abc`) followed by `<target>`,
+        /// or just `<target>` when using `--last`/`--interactive`.
+        first: String,
+        second: Option<String>,
         #[arg(long, value_name = "AGENT")]
         last: Option<String>,
         #[arg(long, value_name = "AGENT")]
@@ -56,12 +72,346 @@ pub enum SettingsAction {
     ResetRoot { agent: String },
 }
 
+const INSPECT_PREVIEW_LINES: usize = 80;
+
 pub fn run() -> anyhow::Result<()> {
+    let code = run_to_exit_code()?;
+    if code != 0 {
+        std::process::exit(code);
+    }
+    Ok(())
+}
+
+fn run_to_exit_code() -> anyhow::Result<i32> {
     let cli = Cli::parse();
     match cli.command {
-        Command::List { .. } => todo!("chapter E"),
-        Command::Inspect { .. } => todo!("chapter E"),
-        Command::Handoff { .. } => todo!("chapter E"),
-        Command::Settings { .. } => todo!("chapter E"),
+        Command::List {
+            agent,
+            last,
+            interactive,
+            verbose,
+        } => cmd_list(&agent, last, interactive, verbose).map(|_| 0),
+        Command::Inspect {
+            session,
+            last,
+            interactive,
+            full,
+        } => cmd_inspect(session, last, interactive, full).map(|_| 0),
+        Command::Handoff {
+            first,
+            second,
+            last,
+            interactive,
+            no_launch,
+        } => {
+            // When `--last` or `--interactive` is used, the only positional is
+            // the target agent. Otherwise we expect `<source-ref> <target>`.
+            let (source, target) = match second {
+                Some(t) => (Some(first), t),
+                None => (None, first),
+            };
+            cmd_handoff(source, &target, last, interactive, no_launch)
+        }
+        Command::Settings { action } => cmd_settings(action).map(|_| 0),
+    }
+}
+
+fn parse_agent(s: &str) -> anyhow::Result<Agent> {
+    Agent::parse(s).ok_or_else(|| {
+        anyhow::anyhow!("unknown agent `{s}` (expected `claude` or `codex`)")
+    })
+}
+
+fn cmd_list(
+    agent_str: &str,
+    last: bool,
+    interactive: bool,
+    verbose: bool,
+) -> anyhow::Result<()> {
+    if last && interactive {
+        return Err(anyhow::anyhow!("`--last` and `--interactive` are mutually exclusive"));
+    }
+    let agent = parse_agent(agent_str)?;
+    let cfg = settings::load_default()?;
+    let provider = providers::for_agent(agent, &cfg);
+    let sessions = provider.list_sessions()?;
+
+    if interactive {
+        if sessions.is_empty() {
+            return Err(anyhow::anyhow!("no sessions available"));
+        }
+        let rows: Vec<String> = sessions.iter().map(select::format_row).collect();
+        let selector = FzfSelector;
+        let idx = <FzfSelector as select::Selector>::pick(&selector, &rows)?
+            .ok_or_else(|| anyhow::anyhow!("no selection made"))?;
+        let chosen = &sessions[idx];
+        println!("{}:{}", agent.as_str(), chosen.id);
+        return Ok(());
+    }
+
+    let stdout = std::io::stdout();
+    let mut out = stdout.lock();
+    if last {
+        if let Some(s) = sessions.first() {
+            writeln!(out, "{}", format_list_row(s, verbose))?;
+        }
+        return Ok(());
+    }
+    for s in &sessions {
+        writeln!(out, "{}", format_list_row(s, verbose))?;
+    }
+    Ok(())
+}
+
+fn format_list_row(s: &SessionSummary, verbose: bool) -> String {
+    let base = select::format_row(s);
+    if verbose {
+        format!("{}\t{}", base, s.path.display())
+    } else {
+        base
+    }
+}
+
+fn cmd_inspect(
+    session: Option<String>,
+    last: Option<String>,
+    interactive: Option<String>,
+    full: bool,
+) -> anyhow::Result<()> {
+    let cfg = settings::load_default()?;
+    let (agent, summary) = resolve_selection(session.as_deref(), last.as_deref(), interactive.as_deref(), &cfg)?;
+    let provider = providers::for_agent(agent, &cfg);
+    let resolved = provider.resolve_session(&summary.id)?;
+    let conv = provider.parse_transcript(&resolved)?;
+
+    print_inspect_header(&conv);
+
+    let now = OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc());
+    let rendered = render::render(&conv, agent_swap(agent), now);
+
+    if full {
+        print!("{rendered}");
+        if !rendered.ends_with('\n') {
+            println!();
+        }
+        return Ok(());
+    }
+
+    let lines: Vec<&str> = rendered.lines().collect();
+    let preview_len = lines.len().min(INSPECT_PREVIEW_LINES);
+    println!("--- preview ---");
+    for line in &lines[..preview_len] {
+        println!("{line}");
+    }
+    if lines.len() > preview_len {
+        let hidden = lines.len() - preview_len;
+        println!("--- end preview ({hidden} more lines hidden, use --full)");
+    } else {
+        println!("--- end preview ---");
+    }
+    Ok(())
+}
+
+/// Pick a "target" agent for the render header during inspect. The handoff
+/// target is unknown at inspect time, so we render as if going to the
+/// opposite agent — this is a preview only and never written to disk.
+fn agent_swap(a: Agent) -> Agent {
+    match a {
+        Agent::Claude => Agent::Codex,
+        Agent::Codex => Agent::Claude,
+    }
+}
+
+fn print_inspect_header(conv: &Conversation) {
+    let mut human = 0usize;
+    let mut agent_msg = 0usize;
+    let mut tool_calls = 0usize;
+    let mut tool_results = 0usize;
+    let mut system = 0usize;
+    let mut unknown = 0usize;
+    for b in &conv.blocks {
+        match b {
+            Block::HumanMessage(_) => human += 1,
+            Block::AgentMessage(_) => agent_msg += 1,
+            Block::ToolCall(_) => tool_calls += 1,
+            Block::ToolResult(_) => tool_results += 1,
+            Block::SystemEvent(_) => system += 1,
+            Block::UnknownEvent(_) => unknown += 1,
+        }
+    }
+    println!("source: {}", conv.source.as_str());
+    println!("session_id: {}", conv.session_id);
+    println!("transcript: {}", conv.transcript_path.display());
+    let cwd = conv
+        .cwd
+        .as_ref()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|| "-".to_string());
+    println!("cwd: {cwd}");
+    println!(
+        "blocks: human={human}, agent={agent_msg}, tool_calls={tool_calls}, tool_results={tool_results}, system={system}, unknown={unknown}"
+    );
+}
+
+fn resolve_selection(
+    explicit: Option<&str>,
+    last_agent: Option<&str>,
+    interactive_agent: Option<&str>,
+    cfg: &Config,
+) -> anyhow::Result<(Agent, SessionSummary)> {
+    let modes = [explicit.is_some(), last_agent.is_some(), interactive_agent.is_some()]
+        .iter()
+        .filter(|b| **b)
+        .count();
+    if modes != 1 {
+        return Err(anyhow::anyhow!(
+            "specify exactly one of <session-ref>, --last <agent>, or --interactive <agent>"
+        ));
+    }
+
+    if let Some(s) = explicit {
+        let r = SessionRef::parse(s)?;
+        let provider = providers::for_agent(r.agent, cfg);
+        let sessions = provider.list_sessions()?;
+        let summary = sessions
+            .into_iter()
+            .find(|x| x.id == r.id)
+            .ok_or_else(|| anyhow::anyhow!("session id `{}` not found", r.id))?;
+        return Ok((r.agent, summary));
+    }
+    if let Some(a) = last_agent {
+        let agent = parse_agent(a)?;
+        let provider = providers::for_agent(agent, cfg);
+        let s = select::resolve(provider.as_ref(), Selection::Last, &FzfSelector)?;
+        return Ok((agent, s));
+    }
+    let a = interactive_agent.unwrap();
+    let agent = parse_agent(a)?;
+    let provider = providers::for_agent(agent, cfg);
+    let s = select::resolve(provider.as_ref(), Selection::Interactive, &FzfSelector)?;
+    Ok((agent, s))
+}
+
+fn cmd_handoff(
+    source: Option<String>,
+    target_str: &str,
+    last: Option<String>,
+    interactive: Option<String>,
+    no_launch: bool,
+) -> anyhow::Result<i32> {
+    let target = parse_agent(target_str)?;
+    let cfg = settings::load_default()?;
+    let (source_agent, summary) =
+        resolve_selection(source.as_deref(), last.as_deref(), interactive.as_deref(), &cfg)?;
+
+    if source_agent == target {
+        return Err(anyhow::anyhow!(
+            "source and target cannot both be `{}`",
+            target.as_str()
+        ));
+    }
+
+    let provider = providers::for_agent(source_agent, &cfg);
+    let resolved = provider.resolve_session(&summary.id)?;
+    let conv = provider.parse_transcript(&resolved)?;
+
+    let now = OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc());
+    let rendered = render::render(&conv, target, now);
+
+    let store = HandoffStore::new(config::effective_handoff_dir(&cfg));
+    let path = store.write(source_agent, target, &conv.session_id, now, &rendered)?;
+    println!("wrote: {}", path.display());
+
+    if no_launch {
+        return Ok(0);
+    }
+
+    let prompt = launch::catch_up_prompt(&path);
+    let launcher = ProcessLauncher;
+    match launcher.launch(target, &prompt) {
+        Ok(_) => Ok(0),
+        Err(e) => {
+            eprintln!("launch failed: {e}");
+            Ok(2)
+        }
+    }
+}
+
+fn cmd_settings(action: SettingsAction) -> anyhow::Result<()> {
+    let path = settings::config_path();
+    match action {
+        SettingsAction::Path => {
+            println!("{}", path.display());
+            Ok(())
+        }
+        SettingsAction::Show => {
+            let cfg = settings::load(&path)?;
+            println!("# config: {}", path.display());
+            print!("{}", toml::to_string_pretty(&cfg)?);
+            println!();
+            println!("# effective");
+            println!(
+                "handoff_dir = {}",
+                config::effective_handoff_dir(&cfg).display()
+            );
+            let claude_roots = config::effective_claude_roots(&cfg.roots.claude);
+            println!("roots.claude = [");
+            for r in &claude_roots {
+                println!("  {},", r.display());
+            }
+            println!("]");
+            let codex_roots = config::effective_codex_roots(&cfg.roots.codex);
+            println!("roots.codex = [");
+            for r in &codex_roots {
+                println!("  {},", r.display());
+            }
+            println!("]");
+            Ok(())
+        }
+        SettingsAction::Edit => {
+            settings::ensure_exists(&path)?;
+            let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
+            let status = std::process::Command::new(&editor).arg(&path).status()?;
+            if !status.success() {
+                return Err(anyhow::anyhow!("editor `{editor}` exited with {status}"));
+            }
+            Ok(())
+        }
+        SettingsAction::Get { key } => {
+            let cfg = settings::load(&path)?;
+            println!("{}", settings::get_value(&cfg, &key)?);
+            Ok(())
+        }
+        SettingsAction::Set { key, value } => {
+            let mut cfg = settings::load(&path)?;
+            settings::set_value(&mut cfg, &key, &value)?;
+            settings::write(&path, &cfg)?;
+            println!("ok");
+            Ok(())
+        }
+        SettingsAction::AddRoot { agent, path: root } => {
+            let agent = parse_agent(&agent)?;
+            let mut cfg = settings::load(&path)?;
+            settings::add_root(&mut cfg, agent, PathBuf::from(root));
+            settings::write(&path, &cfg)?;
+            println!("ok");
+            Ok(())
+        }
+        SettingsAction::RemoveRoot { agent, path: root } => {
+            let agent = parse_agent(&agent)?;
+            let mut cfg = settings::load(&path)?;
+            settings::remove_root(&mut cfg, agent, &root);
+            settings::write(&path, &cfg)?;
+            println!("ok");
+            Ok(())
+        }
+        SettingsAction::ResetRoot { agent } => {
+            let agent = parse_agent(&agent)?;
+            let mut cfg = settings::load(&path)?;
+            settings::reset_root(&mut cfg, agent);
+            settings::write(&path, &cfg)?;
+            println!("ok");
+            Ok(())
+        }
     }
 }
