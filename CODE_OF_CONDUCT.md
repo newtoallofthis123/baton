@@ -1,6 +1,6 @@
 # Code of Conduct
 
-`claudex` should be a useful, low-drama place to collaborate.
+`baton` should be a useful, low-drama place to collaborate.
 
 ## Standards
 

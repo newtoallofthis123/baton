@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use claudex::launch::{catch_up_prompt, LaunchError, Launcher, ProcessLauncher};
-use claudex::model::Agent;
+use baton::launch::{catch_up_prompt, LaunchError, Launcher, ProcessLauncher};
+use baton::model::Agent;
 use tempfile::tempdir;
 
 static PATH_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());

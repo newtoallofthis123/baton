@@ -1,8 +1,8 @@
-# claudex Technical PRD
+# baton Technical PRD
 
 ## Purpose
 
-`claudex` is a local CLI for handing active work between Claude Code and Codex.
+`baton` is a local CLI for handing active work between Claude Code and Codex.
 
 The tool reads a saved source transcript, converts it into a stable internal conversation model, writes a Markdown handoff file, and starts the target agent with a short prompt that points at that file.
 
@@ -24,7 +24,7 @@ The handoff file is the product's center of gravity. It should be durable, inspe
 
 ## Recommended Stack
 
-Build `claudex` as a Rust CLI.
+Build `baton` as a Rust CLI.
 
 Rust is the preferred v1 language because the product is a small local utility that benefits from a single binary, strong filesystem handling, streaming JSONL parsing, and straightforward distribution.
 
@@ -106,10 +106,10 @@ src/
 ### List
 
 ```bash
-claudex list claude
-claudex list codex
-claudex list claude --last
-claudex list codex --interactive
+baton list claude
+baton list codex
+baton list claude --last
+baton list codex --interactive
 ```
 
 Lists locally available sessions for one source agent.
@@ -124,15 +124,15 @@ Output should include enough information for a user to choose a session:
 
 `--last` should print the most recent session for the requested source according to provider metadata.
 
-`--interactive` should pipe session rows into `fzf` and print the selected session reference. This is still a selection helper, not a full terminal UI owned by `claudex`.
+`--interactive` should pipe session rows into `fzf` and print the selected session reference. This is still a selection helper, not a full terminal UI owned by `baton`.
 
 ### Inspect
 
 ```bash
-claudex inspect claude:<session_id>
-claudex inspect codex:<session_id>
-claudex inspect --last claude
-claudex inspect --interactive codex
+baton inspect claude:<session_id>
+baton inspect codex:<session_id>
+baton inspect --last claude
+baton inspect --interactive codex
 ```
 
 Resolves and parses a session without launching another agent.
@@ -151,10 +151,10 @@ Default output should show:
 ### Handoff
 
 ```bash
-claudex handoff claude:<session_id> codex
-claudex handoff codex:<session_id> claude
-claudex handoff --last claude codex
-claudex handoff --interactive codex claude
+baton handoff claude:<session_id> codex
+baton handoff codex:<session_id> claude
+baton handoff --last claude codex
+baton handoff --interactive codex claude
 ```
 
 Creates a handoff file and starts the target agent.
@@ -174,18 +174,18 @@ If launch fails, the operation fails and exits non-zero, but only after printing
 ### Settings
 
 ```bash
-claudex settings path
-claudex settings show
-claudex settings edit
-claudex settings get handoff_dir
-claudex settings get roots.claude
-claudex settings set handoff_dir ~/.handoffs
-claudex settings set roots.codex '["~/.codex/sessions"]'
-claudex settings add-root claude ~/.claude/projects
-claudex settings add-root codex ~/.codex/sessions
-claudex settings remove-root claude ~/.claude/projects
-claudex settings reset-root claude
-claudex settings reset-root codex
+baton settings path
+baton settings show
+baton settings edit
+baton settings get handoff_dir
+baton settings get roots.claude
+baton settings set handoff_dir ~/.handoffs
+baton settings set roots.codex '["~/.codex/sessions"]'
+baton settings add-root claude ~/.claude/projects
+baton settings add-root codex ~/.codex/sessions
+baton settings remove-root claude ~/.claude/projects
+baton settings reset-root claude
+baton settings reset-root codex
 ```
 
 The settings subcommand owns persistent TOML user configuration. It should be boring and scriptable.
@@ -458,12 +458,12 @@ The launcher is deliberately less important than the artifact. A failed launch i
 
 ## Config
 
-`claudex` should have a small TOML config file managed by the `settings` subcommand.
+`baton` should have a small TOML config file managed by the `settings` subcommand.
 
 Default config path:
 
 ```text
-~/.config/claudex/config.toml
+~/.config/baton/config.toml
 ```
 
 Minimal config file shape:
@@ -478,7 +478,7 @@ codex = []
 
 Root precedence:
 
-1. Configured roots from `~/.config/claudex/config.toml`.
+1. Configured roots from `~/.config/baton/config.toml`.
 2. Provider-specific environment variables.
 3. Provider-specific home-directory fallback.
 
@@ -561,9 +561,9 @@ Fixtures should cover:
 Integration tests should run CLI commands against fixture transcript roots:
 
 ```bash
-claudex list claude
-claudex inspect claude:test-session
-claudex handoff claude:test-session codex --no-launch
+baton list claude
+baton inspect claude:test-session
+baton handoff claude:test-session codex --no-launch
 ```
 
 V1 should include a `--no-launch` flag or equivalent test hook so handoff generation can be verified without opening another agent.
@@ -655,7 +655,7 @@ Mitigations:
 
 ## Success Criteria
 
-`claudex` is successful when:
+`baton` is successful when:
 
 - a user can find a recent Claude Code or Codex session from the CLI
 - a user can inspect what will be handed off before launching anything

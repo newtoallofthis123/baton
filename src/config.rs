@@ -22,7 +22,7 @@ pub struct Roots {
 pub fn default_path() -> PathBuf {
     dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("claudex/config.toml")
+        .join("baton/config.toml")
 }
 
 pub fn load() -> anyhow::Result<Config> {

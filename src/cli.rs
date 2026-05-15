@@ -15,7 +15,7 @@ use crate::session_ref::SessionRef;
 use crate::settings;
 
 #[derive(Parser)]
-#[command(name = "claudex", version)]
+#[command(name = "baton", version)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,

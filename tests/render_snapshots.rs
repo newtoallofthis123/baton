@@ -2,11 +2,11 @@
 
 use std::path::PathBuf;
 
-use claudex::model::{
+use baton::model::{
     Agent, Block, Conversation, SystemEventBlock, TextBlock, ToolCallBlock, ToolResultBlock,
     UnknownEventBlock,
 };
-use claudex::render::{render, TOOL_OUTPUT_LIMIT};
+use baton::render::{render, TOOL_OUTPUT_LIMIT};
 use time::macros::datetime;
 use time::OffsetDateTime;
 

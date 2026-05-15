@@ -1,12 +1,12 @@
-# claudex
+# baton
 
-[![CI](https://github.com/newtoallofthis123/claudex/actions/workflows/ci.yml/badge.svg)](https://github.com/newtoallofthis123/claudex/actions/workflows/ci.yml)
+[![CI](https://github.com/newtoallofthis123/baton/actions/workflows/ci.yml/badge.svg)](https://github.com/newtoallofthis123/baton/actions/workflows/ci.yml)
 
 Stop losing context when you move between Claude Code and Codex.
 
-`claudex` is a local CLI that turns an existing Claude Code or Codex conversation into a readable Markdown handoff, then optionally launches the other agent with a short catch-up prompt pointing at that file.
+`baton` is a local CLI that turns an existing Claude Code or Codex conversation into a readable Markdown handoff, then optionally launches the other agent with a short catch-up prompt pointing at that file.
 
-It does not try to fake a native session migration. That would be brittle, opaque, and tied to private transcript internals. `claudex` takes the useful path instead:
+It does not try to fake a native session migration. That would be brittle, opaque, and tied to private transcript internals. `baton` takes the useful path instead:
 
 ```text
 Claude Code or Codex transcript -> stable Markdown handoff -> fresh target session
@@ -14,13 +14,13 @@ Claude Code or Codex transcript -> stable Markdown handoff -> fresh target sessi
 
 The result is a handoff you can inspect, grep, edit, paste, archive, or reuse.
 
-## Why claudex
+## Why baton
 
 Modern coding agents are good at different moments of the work. You may plan in one, implement in another, review from a different angle, or restart a stalled thread with a cleaner context window.
 
 The annoying part is the handoff. Copying chat snippets loses tool calls, file paths, terminal output, and the sequence of decisions that made the work make sense.
 
-`claudex` gives you a small local bridge:
+`baton` gives you a small local bridge:
 
 - preserve the actual conversation instead of summarizing it away
 - keep handoffs as plain Markdown files under your control
@@ -30,7 +30,7 @@ The annoying part is the handoff. Copying chat snippets loses tool calls, file p
 
 ## Where it fits
 
-Use `claudex` when you want to:
+Use `baton` when you want to:
 
 - move implementation work from Claude Code to Codex
 - move a Codex investigation into Claude Code for an interactive pairing pass
@@ -43,7 +43,7 @@ It is especially useful for local development, refactors, incident/debugging ses
 
 ## What it does
 
-`claudex` reads local transcript files created by Claude Code or Codex, converts them into a neutral conversation model, renders a Markdown handoff, and can launch the target agent with a prompt like:
+`baton` reads local transcript files created by Claude Code or Codex, converts them into a neutral conversation model, renders a Markdown handoff, and can launch the target agent with a prompt like:
 
 ```text
 You are catching up from a previous Claude Code/Codex conversation.
@@ -61,19 +61,19 @@ The handoff includes source metadata, working directory, transcript path, human 
 ### Requirements
 
 - Rust stable
-- Claude Code CLI installed as `claude`, if you want to launch Claude from `claudex`
-- Codex CLI installed as `codex`, if you want to launch Codex from `claudex`
+- Claude Code CLI installed as `claude`, if you want to launch Claude from `baton`
+- Codex CLI installed as `codex`, if you want to launch Codex from `baton`
 - `fzf`, optional, for interactive session picking
 
 ### Install From Source
 
 ```bash
-git clone https://github.com/newtoallofthis123/claudex.git
-cd claudex
+git clone https://github.com/newtoallofthis123/baton.git
+cd baton
 cargo install --path . --locked
 ```
 
-This installs the `claudex` binary into `~/.cargo/bin` by default.
+This installs the `baton` binary into `~/.cargo/bin` by default.
 
 You can also use the included task runner:
 
@@ -91,7 +91,7 @@ cargo build --release
 The release binary will be written to:
 
 ```text
-target/release/claudex
+target/release/baton
 ```
 
 ### Nix Development Shell
@@ -109,49 +109,49 @@ The dev shell includes Rust, `rustfmt`, `clippy`, `cargo-watch`, `cargo-nextest`
 List recent Claude Code sessions for the current project:
 
 ```bash
-claudex list claude
+baton list claude
 ```
 
 List Codex sessions:
 
 ```bash
-claudex list codex
+baton list codex
 ```
 
 Inspect a session before handing it off:
 
 ```bash
-claudex inspect claude:<session_id>
+baton inspect claude:<session_id>
 ```
 
 Select a session to handoff from Claude Code to Codex:
 
 ```bash
-claudex handoff claude codex
+baton handoff claude codex
 ```
 
 Create a handoff from Claude Code to Codex:
 
 ```bash
-claudex handoff claude:<session_id> codex
+baton handoff claude:<session_id> codex
 ```
 
 Create the handoff file without launching the target agent:
 
 ```bash
-claudex handoff claude:<session_id> codex --no-launch
+baton handoff claude:<session_id> codex --no-launch
 ```
 
 Use the latest source session:
 
 ```bash
-claudex handoff --last claude codex
+baton handoff --last claude codex
 ```
 
 Pick a session interactively with `fzf`:
 
 ```bash
-claudex handoff --interactive codex claude
+baton handoff --interactive codex claude
 ```
 
 ## Commands
@@ -159,12 +159,12 @@ claudex handoff --interactive codex claude
 ### `list`
 
 ```bash
-claudex list claude
-claudex list codex
-claudex list claude --last
-claudex list codex --interactive
-claudex list claude --all-sessions
-claudex list codex --verbose
+baton list claude
+baton list codex
+baton list claude --last
+baton list codex --interactive
+baton list claude --all-sessions
+baton list codex --verbose
 ```
 
 `list` shows locally available sessions for one agent. By default, it filters to sessions whose recorded working directory matches your current directory. Use `--all-sessions` to search across every known project, or `--pwd <path>` to search a specific project.
@@ -174,11 +174,11 @@ Use `--verbose` to include transcript paths.
 ### `inspect`
 
 ```bash
-claudex inspect claude:<session_id>
-claudex inspect codex:<session_id>
-claudex inspect --last claude
-claudex inspect --interactive codex
-claudex inspect claude:<session_id> --full
+baton inspect claude:<session_id>
+baton inspect codex:<session_id>
+baton inspect --last claude
+baton inspect --interactive codex
+baton inspect claude:<session_id> --full
 ```
 
 `inspect` resolves and parses a session without launching another agent. It prints source metadata, block counts, and a preview of the Markdown handoff. Use `--full` to print the full rendered handoff.
@@ -186,11 +186,11 @@ claudex inspect claude:<session_id> --full
 ### `handoff`
 
 ```bash
-claudex handoff claude:<session_id> codex
-claudex handoff codex:<session_id> claude
-claudex handoff --last claude codex
-claudex handoff --interactive codex claude
-claudex handoff claude:<session_id> codex --no-launch
+baton handoff claude:<session_id> codex
+baton handoff codex:<session_id> claude
+baton handoff --last claude codex
+baton handoff --interactive codex claude
+baton handoff claude:<session_id> codex --no-launch
 ```
 
 `handoff` writes a Markdown handoff file and, unless `--no-launch` is set, starts the target agent with a catch-up prompt.
@@ -201,22 +201,22 @@ By default, handoff files are written to:
 ~/.handoffs
 ```
 
-If launching the target agent fails, `claudex` still prints the written handoff path and exits non-zero. You can then open the target agent yourself and point it at the file.
+If launching the target agent fails, `baton` still prints the written handoff path and exits non-zero. You can then open the target agent yourself and point it at the file.
 
 ### `settings`
 
 ```bash
-claudex settings path
-claudex settings show
-claudex settings edit
-claudex settings get handoff_dir
-claudex settings set handoff_dir ~/.handoffs
-claudex settings get roots.claude
-claudex settings set roots.codex '["~/.codex/sessions"]'
-claudex settings add-root claude ~/.claude/projects
-claudex settings add-root codex ~/.codex/sessions
-claudex settings remove-root claude ~/.claude/projects
-claudex settings reset-root claude
+baton settings path
+baton settings show
+baton settings edit
+baton settings get handoff_dir
+baton settings set handoff_dir ~/.handoffs
+baton settings get roots.claude
+baton settings set roots.codex '["~/.codex/sessions"]'
+baton settings add-root claude ~/.claude/projects
+baton settings add-root codex ~/.codex/sessions
+baton settings remove-root claude ~/.claude/projects
+baton settings reset-root claude
 ```
 
 Settings are stored as TOML.
@@ -226,13 +226,13 @@ Settings are stored as TOML.
 The default config path follows your platform config directory. On most Unix-like systems, it is:
 
 ```text
-~/.config/claudex/config.toml
+~/.config/baton/config.toml
 ```
 
 You can print the exact path with:
 
 ```bash
-claudex settings path
+baton settings path
 ```
 
 Example config:
@@ -245,14 +245,14 @@ claude = ["~/.claude/projects"]
 codex = ["~/.codex/sessions"]
 ```
 
-If roots are not configured, `claudex` discovers defaults from:
+If roots are not configured, `baton` discovers defaults from:
 
 - `CLAUDE_CONFIG_DIR`, using `<CLAUDE_CONFIG_DIR>/projects`
 - `CODEX_HOME`, using `<CODEX_HOME>/sessions`
 - `~/.claude/projects`
 - `~/.codex/sessions`
 
-`XDG_CONFIG_HOME` is respected for the `claudex` settings file, which is useful for tests and sandboxed setups.
+`XDG_CONFIG_HOME` is respected for the `baton` settings file, which is useful for tests and sandboxed setups.
 
 ## Handoff Format
 
@@ -286,22 +286,22 @@ Plain text is the feature. It is readable by humans, friendly to agents, resilie
 
 ## Privacy
 
-`claudex` is local-first. It reads local agent transcripts and writes local Markdown handoff files. It does not upload transcripts anywhere.
+`baton` is local-first. It reads local agent transcripts and writes local Markdown handoff files. It does not upload transcripts anywhere.
 
 Handoff files can contain sensitive prompts, file paths, command output, secrets pasted into chats, or private source snippets. Treat `~/.handoffs` like private development data. Do not commit handoffs unless you have reviewed and intentionally sanitized them.
 
 ## Provider Compatibility
 
-`claudex` depends on local session files written by Claude Code and Codex. Those providers own their session storage layout and JSONL event schemas, and they can change either without warning.
+`baton` depends on local session files written by Claude Code and Codex. Those providers own their session storage layout and JSONL event schemas, and they can change either without warning.
 
-If Claude Code or Codex changes where sessions are stored, how session IDs map to files, or what transcript events look like, `claudex` may fail to list, inspect, parse, or hand off sessions until its provider adapter is updated.
+If Claude Code or Codex changes where sessions are stored, how session IDs map to files, or what transcript events look like, `baton` may fail to list, inspect, parse, or hand off sessions until its provider adapter is updated.
 
-If this happens, please report it at [github.com/newtoallofthis123/claudex/issues](https://github.com/newtoallofthis123/claudex/issues). Include the source agent, command, error output, and a minimal sanitized transcript sample when possible.
+If this happens, please report it at [github.com/newtoallofthis123/baton/issues](https://github.com/newtoallofthis123/baton/issues). Include the source agent, command, error output, and a minimal sanitized transcript sample when possible.
 
 ## Limitations
 
 - Claude Code and Codex transcript formats are private implementation details and may break provider adapters when they change.
-- `claudex` preserves conversation structure; it does not summarize by default.
+- `baton` preserves conversation structure; it does not summarize by default.
 - It does not write fake native sessions into either tool.
 - Tool output is truncated to keep handoffs usable.
 - Launching requires the target CLI executable to be installed and available on `PATH`.

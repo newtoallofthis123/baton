@@ -19,7 +19,7 @@ fn fixtures_codex() -> PathBuf {
 /// same tempdir.
 fn fixture_env() -> (TempDir, PathBuf) {
     let tmp = tempdir().unwrap();
-    let cfg_dir = tmp.path().join("claudex");
+    let cfg_dir = tmp.path().join("baton");
     std::fs::create_dir_all(&cfg_dir).unwrap();
     let handoff_dir = tmp.path().join("handoffs");
     let cfg_text = format!(
@@ -32,8 +32,8 @@ fn fixture_env() -> (TempDir, PathBuf) {
     (tmp, handoff_dir)
 }
 
-fn claudex(home: &Path) -> Command {
-    let mut c = Command::cargo_bin("claudex").unwrap();
+fn baton(home: &Path) -> Command {
+    let mut c = Command::cargo_bin("baton").unwrap();
     c.env("XDG_CONFIG_HOME", home);
     c.env_remove("CLAUDE_CONFIG_DIR");
     c.env_remove("CODEX_HOME");
@@ -53,7 +53,7 @@ fn fake_fzf_that_cancels(dir: &Path) -> PathBuf {
 #[test]
 fn list_claude_lists_fixtures() {
     let (tmp, _) = fixture_env();
-    let out = claudex(tmp.path())
+    let out = baton(tmp.path())
         .args(["list", "claude", "--all-sessions"])
         .assert()
         .success();
@@ -80,7 +80,7 @@ fn list_claude_lists_fixtures() {
 #[test]
 fn list_last_prints_one_row() {
     let (tmp, _) = fixture_env();
-    let out = claudex(tmp.path())
+    let out = baton(tmp.path())
         .args(["list", "claude", "--last", "--all-sessions"])
         .assert()
         .success();
@@ -97,7 +97,7 @@ fn list_last_prints_one_row() {
 #[test]
 fn list_verbose_appends_path() {
     let (tmp, _) = fixture_env();
-    let out = claudex(tmp.path())
+    let out = baton(tmp.path())
         .args(["list", "claude", "--last", "--verbose", "--all-sessions"])
         .assert()
         .success();
@@ -116,7 +116,7 @@ fn list_verbose_appends_path() {
 #[test]
 fn inspect_preview() {
     let (tmp, _) = fixture_env();
-    let out = claudex(tmp.path())
+    let out = baton(tmp.path())
         .args(["inspect", "claude:fixture-simple"])
         .assert()
         .success();
@@ -130,7 +130,7 @@ fn inspect_preview() {
 #[test]
 fn inspect_full_includes_body() {
     let (tmp, _) = fixture_env();
-    let out = claudex(tmp.path())
+    let out = baton(tmp.path())
         .args(["inspect", "claude:fixture-simple", "--full"])
         .assert()
         .success();
@@ -157,7 +157,7 @@ fn inspect_cancelled_interactive_error_is_concise_with_backtrace_enabled() {
         existing_path.to_string_lossy()
     );
 
-    let assert = claudex(tmp.path())
+    let assert = baton(tmp.path())
         .args(["inspect", "--all-sessions"])
         .env("PATH", path)
         .env("RUST_BACKTRACE", "1")
@@ -166,7 +166,7 @@ fn inspect_cancelled_interactive_error_is_concise_with_backtrace_enabled() {
     let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
 
     assert!(
-        stderr.contains("claudex: no selection made"),
+        stderr.contains("baton: no selection made"),
         "stderr: {stderr}"
     );
     assert!(
@@ -182,7 +182,7 @@ fn inspect_cancelled_interactive_error_is_concise_with_backtrace_enabled() {
 #[test]
 fn handoff_no_launch_writes_file() {
     let (tmp, handoff_dir) = fixture_env();
-    let out = claudex(tmp.path())
+    let out = baton(tmp.path())
         .args(["handoff", "claude:fixture-simple", "codex", "--no-launch"])
         .assert()
         .success();
@@ -206,7 +206,7 @@ fn handoff_no_launch_writes_file() {
 #[test]
 fn handoff_same_agent_rejected() {
     let (tmp, _) = fixture_env();
-    let assert = claudex(tmp.path())
+    let assert = baton(tmp.path())
         .args(["handoff", "claude:fixture-simple", "claude", "--no-launch"])
         .assert()
         .failure();

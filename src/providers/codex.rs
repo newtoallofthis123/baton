@@ -57,7 +57,7 @@ impl Provider for CodexProvider {
                     Ok(None) => {}
                     Err(e) => {
                         eprintln!(
-                            "claudex: skipping unreadable rollout {}: {}",
+                            "baton: skipping unreadable rollout {}: {}",
                             rollout.display(),
                             e
                         );

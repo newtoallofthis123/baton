@@ -1,8 +1,8 @@
 fn main() {
-    let code = match claudex::cli::run_to_exit_code() {
+    let code = match baton::cli::run_to_exit_code() {
         Ok(code) => code,
         Err(error) => {
-            let code = claudex::cli::exit_code(&error);
+            let code = baton::cli::exit_code(&error);
             print_error(&error);
             code
         }
@@ -11,7 +11,7 @@ fn main() {
 }
 
 fn print_error(error: &anyhow::Error) {
-    eprintln!("claudex: {error}");
+    eprintln!("baton: {error}");
     for cause in error.chain().skip(1) {
         eprintln!("  caused by: {cause}");
     }

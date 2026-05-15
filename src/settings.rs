@@ -11,7 +11,7 @@ use crate::model::Agent;
 /// `dirs::config_dir()`. Falls back to `config::default_path()`.
 pub fn config_path() -> PathBuf {
     if let Some(xdg) = std::env::var_os("XDG_CONFIG_HOME") {
-        return PathBuf::from(xdg).join("claudex/config.toml");
+        return PathBuf::from(xdg).join("baton/config.toml");
     }
     config::default_path()
 }

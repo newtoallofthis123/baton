@@ -1,5 +1,5 @@
 {
-  description = "claudex — handoff CLI between Claude Code and Codex";
+  description = "baton — handoff CLI between Claude Code and Codex";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

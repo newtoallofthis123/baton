@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use claudex::model::{Agent, Block, Conversation};
-use claudex::providers::claude::ClaudeProvider;
-use claudex::providers::{Provider, ProviderError};
+use baton::model::{Agent, Block, Conversation};
+use baton::providers::claude::ClaudeProvider;
+use baton::providers::{Provider, ProviderError};
 
 fn fixtures_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/claude")
@@ -208,7 +208,7 @@ fn parse_transcript_invalid_jsonl_reports_1_indexed_line() {
 
 #[test]
 fn list_sessions_missing_configured_root_errors() {
-    let p = ClaudeProvider::new(vec![PathBuf::from("/definitely/does/not/exist/claudex")]);
+    let p = ClaudeProvider::new(vec![PathBuf::from("/definitely/does/not/exist/baton")]);
     let err = p.list_sessions().unwrap_err();
     assert!(matches!(err, ProviderError::RootNotFound(_)));
 }

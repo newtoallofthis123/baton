@@ -140,7 +140,7 @@ fn summarize_transcript(path: &Path, agent: Agent) -> Option<SessionSummary> {
     let file = match File::open(path) {
         Ok(f) => f,
         Err(e) => {
-            eprintln!("claudex: skipping {}: {}", path.display(), e);
+            eprintln!("baton: skipping {}: {}", path.display(), e);
             return None;
         }
     };

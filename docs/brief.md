@@ -1,6 +1,6 @@
-# claudex
+# baton
 
-`claudex` is a small handoff tool for moving active work between Claude Code and Codex without pretending their native session formats are interchangeable.
+`baton` is a small handoff tool for moving active work between Claude Code and Codex without pretending their native session formats are interchangeable.
 
 The goal is simple: when a conversation has useful momentum in one coding agent, start a fresh session in the other agent with enough faithful context to continue. The tool should make that handoff explicit, inspectable, and cheap.
 
@@ -8,7 +8,7 @@ The goal is simple: when a conversation has useful momentum in one coding agent,
 
 Claude Code and Codex both save local conversation history as JSONL, but they do not speak the same transcript format. A native session migration would be brittle: it would depend on private event shapes, local indexes, tool-call conventions, and resume behavior that can change between releases.
 
-`claudex` takes a humbler route. It reads the source agent's saved transcript, walks the JSONL mechanically, writes a plain handoff file, and opens the target agent with a short catch-up prompt that points at that file.
+`baton` takes a humbler route. It reads the source agent's saved transcript, walks the JSONL mechanically, writes a plain handoff file, and opens the target agent with a short catch-up prompt that points at that file.
 
 The handoff is not a regenerated summary. It is a cleaned conversation record.
 
@@ -72,18 +72,18 @@ The tool should not assume the user's workflow.
 The main command creates a handoff from one agent to the other:
 
 ```bash
-claudex handoff claude:<session_id> codex
-claudex handoff codex:<session_id> claude
+baton handoff claude:<session_id> codex
+baton handoff codex:<session_id> claude
 ```
 
 Supporting commands help users find and understand sessions:
 
 ```bash
-claudex list claude
-claudex list codex
+baton list claude
+baton list codex
 
-claudex inspect claude:<session_id>
-claudex inspect codex:<session_id>
+baton inspect claude:<session_id>
+baton inspect codex:<session_id>
 ```
 
 The default handoff flow should:
@@ -95,7 +95,7 @@ The default handoff flow should:
 
 ## Non-Goals
 
-`claudex` should not start by writing fake native sessions into Claude Code or Codex history. That may become an experimental feature later, but it is not the core promise.
+`baton` should not start by writing fake native sessions into Claude Code or Codex history. That may become an experimental feature later, but it is not the core promise.
 
 It should not summarize the conversation by default. Summaries are useful when explicitly requested, but default handoffs should be mechanically derived from the original transcript.
 
@@ -111,4 +111,4 @@ Prefer the smallest useful thing:
 - explicit files over hidden state
 - handoff over migration
 
-`claudex` should feel like a sharp little local utility: no magic, no ceremony, just a clean way to carry momentum from one agent to another.
+`baton` should feel like a sharp little local utility: no magic, no ceremony, just a clean way to carry momentum from one agent to another.

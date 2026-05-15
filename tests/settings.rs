@@ -1,8 +1,8 @@
 use assert_cmd::Command;
 use tempfile::tempdir;
 
-fn claudex(home: &std::path::Path) -> Command {
-    let mut c = Command::cargo_bin("claudex").unwrap();
+fn baton(home: &std::path::Path) -> Command {
+    let mut c = Command::cargo_bin("baton").unwrap();
     c.env("XDG_CONFIG_HOME", home);
     c.env_remove("CLAUDE_CONFIG_DIR");
     c.env_remove("CODEX_HOME");
@@ -12,13 +12,13 @@ fn claudex(home: &std::path::Path) -> Command {
 #[test]
 fn settings_path_uses_xdg() {
     let tmp = tempdir().unwrap();
-    let out = claudex(tmp.path())
+    let out = baton(tmp.path())
         .args(["settings", "path"])
         .assert()
         .success();
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
     assert!(
-        stdout.trim().ends_with("claudex/config.toml"),
+        stdout.trim().ends_with("baton/config.toml"),
         "got: {stdout}"
     );
     assert!(
@@ -31,24 +31,24 @@ fn settings_path_uses_xdg() {
 fn settings_roundtrip() {
     let tmp = tempdir().unwrap();
 
-    claudex(tmp.path())
+    baton(tmp.path())
         .args(["settings", "set", "handoff_dir", "/tmp/handoffs"])
         .assert()
         .success();
 
-    let out = claudex(tmp.path())
+    let out = baton(tmp.path())
         .args(["settings", "get", "handoff_dir"])
         .assert()
         .success();
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
     assert!(stdout.contains("/tmp/handoffs"), "got: {stdout}");
 
-    claudex(tmp.path())
+    baton(tmp.path())
         .args(["settings", "add-root", "claude", "/tmp/foo"])
         .assert()
         .success();
 
-    let out = claudex(tmp.path())
+    let out = baton(tmp.path())
         .args(["settings", "show"])
         .assert()
         .success();
@@ -58,12 +58,12 @@ fn settings_roundtrip() {
         "show stdout missing root:\n{stdout}"
     );
 
-    claudex(tmp.path())
+    baton(tmp.path())
         .args(["settings", "reset-root", "claude"])
         .assert()
         .success();
 
-    let out = claudex(tmp.path())
+    let out = baton(tmp.path())
         .args(["settings", "show"])
         .assert()
         .success();
@@ -81,12 +81,12 @@ fn settings_roundtrip() {
 fn add_root_is_idempotent() {
     let tmp = tempdir().unwrap();
     for _ in 0..2 {
-        claudex(tmp.path())
+        baton(tmp.path())
             .args(["settings", "add-root", "codex", "/tmp/once"])
             .assert()
             .success();
     }
-    let out = claudex(tmp.path())
+    let out = baton(tmp.path())
         .args(["settings", "show"])
         .assert()
         .success();
@@ -106,7 +106,7 @@ fn add_root_is_idempotent() {
 #[test]
 fn unknown_get_key_errors() {
     let tmp = tempdir().unwrap();
-    claudex(tmp.path())
+    baton(tmp.path())
         .args(["settings", "get", "nope"])
         .assert()
         .failure();

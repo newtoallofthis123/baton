@@ -1,4 +1,4 @@
-# claudex — task runner
+# baton — task runner
 # Run `just` to list available recipes.
 
 set shell := ["bash", "-cu"]
@@ -51,7 +51,7 @@ install:
 
 # Uninstall the binary.
 uninstall:
-    cargo uninstall claudex
+    cargo uninstall baton
 
 # Remove build artifacts.
 clean:

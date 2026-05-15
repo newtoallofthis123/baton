@@ -1,10 +1,10 @@
 # Security Policy
 
-`claudex` works with local coding-agent transcripts. Those transcripts and generated handoff files may contain private prompts, source code, filesystem paths, command output, credentials, or other sensitive data.
+`baton` works with local coding-agent transcripts. Those transcripts and generated handoff files may contain private prompts, source code, filesystem paths, command output, credentials, or other sensitive data.
 
 ## Supported Versions
 
-`claudex` is currently pre-1.0. Security fixes will target the latest `main` branch unless a release policy is added later.
+`baton` is currently pre-1.0. Security fixes will target the latest `main` branch unless a release policy is added later.
 
 ## Reporting a Vulnerability
 
@@ -18,7 +18,7 @@ Do not add real Claude Code or Codex transcripts to the repository. Use small, s
 
 ## Local Data
 
-By default, `claudex` writes handoff files under:
+By default, `baton` writes handoff files under:
 
 ```text
 ~/.handoffs

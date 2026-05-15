@@ -1,7 +1,7 @@
 use std::fs;
 
-use claudex::handoff_store::HandoffStore;
-use claudex::model::Agent;
+use baton::handoff_store::HandoffStore;
+use baton::model::Agent;
 use tempfile::tempdir;
 use time::macros::datetime;
 use time::OffsetDateTime;

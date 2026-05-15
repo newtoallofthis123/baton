@@ -175,7 +175,7 @@ fn field_command(s: &SessionSummary) -> String {
     }
 }
 
-/// Tab-separated row for `claudex list`. Columns: id, command, time,
+/// Tab-separated row for `baton list`. Columns: id, command, time,
 /// and dir when `show_dir` is true (i.e. `--all-sessions`).
 pub fn format_list_row(s: &SessionSummary, show_dir: bool, now: OffsetDateTime) -> String {
     let base = format!("{}\t{}\t{}", s.id, field_command(s), field_time(s, now));

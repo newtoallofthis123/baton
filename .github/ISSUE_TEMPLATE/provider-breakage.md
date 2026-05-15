@@ -1,6 +1,6 @@
 ---
 name: Provider breakage
-about: Report a Claude Code or Codex session storage/schema change that breaks claudex
+about: Report a Claude Code or Codex session storage/schema change that breaks baton
 title: "[provider] "
 labels: bug, provider
 assignees: ""

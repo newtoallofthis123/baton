@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use claudex::model::{Agent, Block, Conversation};
-use claudex::providers::codex::CodexProvider;
-use claudex::providers::{Provider, ProviderError};
+use baton::model::{Agent, Block, Conversation};
+use baton::providers::codex::CodexProvider;
+use baton::providers::{Provider, ProviderError};
 
 fn fixture_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/codex")

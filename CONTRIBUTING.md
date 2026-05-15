@@ -1,6 +1,6 @@
-# Contributing to claudex
+# Contributing to baton
 
-Thanks for taking the time to improve `claudex`.
+Thanks for taking the time to improve `baton`.
 
 The project is intentionally small: a local Rust CLI that converts Claude Code and Codex transcripts into stable Markdown handoffs. Contributions should keep that shape clear.
 
@@ -69,7 +69,7 @@ When reporting parser or handoff bugs, avoid sharing private transcripts directl
 
 Useful details:
 
-- `claudex --version`
+- `baton --version`
 - operating system
 - source agent (`claude` or `codex`)
 - command that failed
@@ -79,4 +79,4 @@ Useful details:
 
 ## Feature Requests
 
-Feature requests should explain the workflow they unlock. `claudex` is most interested in features that make handoffs more faithful, inspectable, or useful without making the core flow opaque.
+Feature requests should explain the workflow they unlock. `baton` is most interested in features that make handoffs more faithful, inspectable, or useful without making the core flow opaque.
