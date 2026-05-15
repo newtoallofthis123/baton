@@ -56,3 +56,7 @@ uninstall:
 # Remove build artifacts.
 clean:
     cargo clean
+
+# Publish to crates.io
+publish:
+  cargo publish
