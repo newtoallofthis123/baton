@@ -12,18 +12,18 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  detect-signoff:
-    name: detect signoff
+  detect:
+    name: detect
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     permissions:
       statuses: read
     outputs:
-      format: ${{ steps.detect.outputs.format }}
-      lint: ${{ steps.detect.outputs.lint }}
+      format: ${{ steps.read.outputs.format }}
+      lint: ${{ steps.read.outputs.lint }}
     steps:
-      - name: Read signoff statuses on head commit
-        id: detect
+      - name: Read iswear statuses on the head commit
+        id: read
         uses: actions/github-script@v7
         with:
           script: |
@@ -33,16 +33,15 @@ jobs:
               { owner: context.repo.owner, repo: context.repo.repo, ref, per_page: 100 }
             );
             for (const check of ['format', 'lint']) {
-              const status = statuses.find((s) => s.context === `signoff/${check}`);
-              const ok = status?.state === 'success';
-              core.setOutput(check, ok ? 'true' : 'false');
-              core.info(`signoff/${check} on ${ref}: ${status?.state || 'missing'}`);
+              const status = statuses.find((s) => s.context === `iswear/${check}`);
+              core.setOutput(check, status?.state === 'success' ? 'true' : 'false');
+              core.info(`iswear/${check} on ${ref}: ${status?.state || 'missing'}`);
             }
 
   format:
     name: format
-    needs: detect-signoff
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && needs.detect-signoff.outputs.format != 'true'
+    needs: detect
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && needs.detect.outputs.format != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,8 +52,8 @@ jobs:
 
   lint:
     name: lint
-    needs: detect-signoff
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && needs.detect-signoff.outputs.lint != 'true'
+    needs: detect
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && needs.detect.outputs.lint != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -78,36 +77,36 @@ jobs:
     name: pr-ready
     if: always() && github.event_name != 'push' && !(github.event_name == 'pull_request' && github.event.pull_request.draft)
     runs-on: ubuntu-latest
-    needs: [detect-signoff, format, lint, test]
+    needs: [detect, format, lint, test]
     steps:
-      - name: Evaluate signoff or CI result
+      - name: Evaluate sworn-or-CI per check
         env:
           EVENT: ${{ github.event_name }}
-          SIGNOFF_FORMAT: ${{ needs.detect-signoff.outputs.format }}
-          SIGNOFF_LINT: ${{ needs.detect-signoff.outputs.lint }}
+          SWORN_FORMAT: ${{ needs.detect.outputs.format }}
+          SWORN_LINT: ${{ needs.detect.outputs.lint }}
           FORMAT_RESULT: ${{ needs.format.result }}
           LINT_RESULT: ${{ needs.lint.result }}
           TEST_RESULT: ${{ needs.test.result }}
         run: |
           if [ "$EVENT" = "merge_group" ] || [ "$EVENT" = "workflow_dispatch" ]; then
             if [ "$TEST_RESULT" = "success" ]; then
-              echo "Merge-tier tests passed."
+              echo "Merge-tier checks passed."
               exit 0
             fi
-            echo "::error ::Merge-tier tests did not pass (result: $TEST_RESULT). Signoff never applies here."
+            echo "::error ::Merge-tier checks did not pass (result: $TEST_RESULT). Attestation never applies here."
             exit 1
           fi
 
           ok=true
           for check in format lint; do
-            signoff_var="SIGNOFF_$(echo "$check" | tr a-z A-Z)"
+            sworn_var="SWORN_$(echo "$check" | tr a-z A-Z)"
             result_var="$(echo "$check" | tr a-z A-Z)_RESULT"
-            if [ "${!signoff_var}" = "true" ]; then
-              echo "$check: covered by local signoff."
+            if [ "${!sworn_var}" = "true" ]; then
+              echo "$check: sworn locally."
             elif [ "${!result_var}" = "success" ]; then
               echo "$check: passed in CI."
             else
-              echo "::error ::$check: no local signoff and CI result is '${!result_var}'."
+              echo "::error ::$check: not sworn and CI result is '${!result_var}'."
               ok=false
             fi
           done
