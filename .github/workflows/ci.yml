@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  workflow_dispatch:
+  merge_group:
   pull_request:
   push:
     branches:
@@ -10,8 +12,37 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    name: Rust
+  detect-signoff:
+    name: detect signoff
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: read
+    outputs:
+      format: ${{ steps.detect.outputs.format }}
+      lint: ${{ steps.detect.outputs.lint }}
+    steps:
+      - name: Read signoff statuses on head commit
+        id: detect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = context.payload.pull_request.head.sha;
+            const statuses = await github.paginate(
+              github.rest.repos.listCommitStatusesForRef,
+              { owner: context.repo.owner, repo: context.repo.repo, ref, per_page: 100 }
+            );
+            for (const check of ['format', 'lint']) {
+              const status = statuses.find((s) => s.context === `signoff/${check}`);
+              const ok = status?.state === 'success';
+              core.setOutput(check, ok ? 'true' : 'false');
+              core.info(`signoff/${check} on ${ref}: ${status?.state || 'missing'}`);
+            }
+
+  format:
+    name: format
+    needs: detect-signoff
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && needs.detect-signoff.outputs.format != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -20,8 +51,64 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+  lint:
+    name: lint
+    needs: detect-signoff
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && needs.detect-signoff.outputs.lint != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Lint
         run: cargo clippy --all-targets --all-features -- -D warnings
 
+  test:
+    name: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Test
         run: cargo test --locked
+
+  pr-ready:
+    name: pr-ready
+    if: always() && github.event_name != 'push' && !(github.event_name == 'pull_request' && github.event.pull_request.draft)
+    runs-on: ubuntu-latest
+    needs: [detect-signoff, format, lint, test]
+    steps:
+      - name: Evaluate signoff or CI result
+        env:
+          EVENT: ${{ github.event_name }}
+          SIGNOFF_FORMAT: ${{ needs.detect-signoff.outputs.format }}
+          SIGNOFF_LINT: ${{ needs.detect-signoff.outputs.lint }}
+          FORMAT_RESULT: ${{ needs.format.result }}
+          LINT_RESULT: ${{ needs.lint.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          if [ "$EVENT" = "merge_group" ] || [ "$EVENT" = "workflow_dispatch" ]; then
+            if [ "$TEST_RESULT" = "success" ]; then
+              echo "Merge-tier tests passed."
+              exit 0
+            fi
+            echo "::error ::Merge-tier tests did not pass (result: $TEST_RESULT). Signoff never applies here."
+            exit 1
+          fi
+
+          ok=true
+          for check in format lint; do
+            signoff_var="SIGNOFF_$(echo "$check" | tr a-z A-Z)"
+            result_var="$(echo "$check" | tr a-z A-Z)_RESULT"
+            if [ "${!signoff_var}" = "true" ]; then
+              echo "$check: covered by local signoff."
+            elif [ "${!result_var}" = "success" ]; then
+              echo "$check: passed in CI."
+            else
+              echo "::error ::$check: no local signoff and CI result is '${!result_var}'."
+              ok=false
+            fi
+          done
+          $ok
