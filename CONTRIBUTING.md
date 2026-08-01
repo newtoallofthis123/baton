@@ -80,3 +80,7 @@ Useful details:
 ## Feature Requests
 
 Feature requests should explain the workflow they unlock. `baton` is most interested in features that make handoffs more faithful, inspectable, or useful without making the core flow opaque.
+
+## Local checks
+
+PR-tier checks (format, lint) can be run and attested locally with `iswear push`; CI then skips the duplicates. The merge queue always runs everything.
